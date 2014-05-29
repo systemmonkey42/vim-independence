@@ -49,8 +49,8 @@ function s:LoadConfig()
 		return
 	endif
 
-	let l:root   = system('cd ' . fnameescape(expand("%:h")) . "; echo -n `git rev-parse --show-toplevel`")
 	let l:query  = '%:p:h'
+	let l:root = system('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel`")
 	let l:maybe  = ''
 	let l:toload = []
 
