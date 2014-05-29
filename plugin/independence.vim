@@ -49,7 +49,7 @@ function s:LoadConfig()
 		return
 	endif
 
-	let l:root = system('cd ' . fnameescape(expand("%:h")) . "; echo -n `git rev-parse --show-toplevel`")
+	let l:root = system('cd ' . shellescape(expand("%:h")) . "; echo -n `git rev-parse --show-toplevel`")
 	let l:configFile = l:root . '/.vimrc'
 	if filereadable(l:configFile)
 		exec ":source " . l:configFile
