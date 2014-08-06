@@ -65,10 +65,9 @@ function s:LoadConfig()
     let l:root = l:roots[0]
 
 	let l:configFile = l:roots[1] . '/info/.vimrc'
-
-	if filereadable(l:configFile)
+    if filereadable(l:configFile)
         call add(l:toload, l:configFile)
-	endif
+    endif
 
 	" Find all of the .vimrc files from bottom-up
 	while l:maybe != l:root
