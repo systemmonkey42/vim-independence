@@ -49,14 +49,25 @@ function s:LoadConfig()
 		return
 	endif
 
+    if ! executable('git')
+        return
+    endif
+
 	let l:query  = '%:p:h'
-	let l:root = system('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel`")
+	let l:roots = systemlist('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel --git-dir 2>/dev/null')
 	let l:maybe  = ''
 	let l:toload = []
 
-	" Make sure that we're *IN* a Git project
-	if ! isdirectory(l:root)
-		return
+    if ! exists(l:roots[0])
+        return
+    endif
+
+    let l:root = l:roots[0]
+
+	let l:configFile = l:roots[1] . '/info/.vimrc'
+
+	if filereadable(l:configFile)
+        call add(l:toload, l:configFile)
 	endif
 
 	" Find all of the .vimrc files from bottom-up
