@@ -23,14 +23,13 @@
 " completes.
 
 if exists('g:loaded_independence')
-	finish
+    finish
 endif
 let g:loaded_independence=1
 
 " Section: Event group setup
-" Act when creating or loading a file
 augroup Independence
-	au BufNewFile,BufRead * call s:LoadConfig()
+    autocmd VimEnter,BufNewFile,BufRead * call s:LoadConfig()
 augroup END
 
 " Section: Script variables
@@ -41,50 +40,60 @@ augroup END
 " These functions are not/should not be directly accessible
 
 " Function: LoadConfig()
-"
+let s:loaded_configs = {}
+
 " If the file .vimrc exists in the root of a git project - load it
 function s:LoadConfig()
-	let l:file = fnameescape(expand("%:p"))
-	if empty(l:file)
-		return
-	endif
-
     if ! executable('git')
         return
     endif
 
-	let l:query  = '%:p:h'
-	let l:roots = systemlist('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel --git-dir 2>/dev/null')
-	let l:maybe  = ''
-	let l:toload = []
+    let l:query  = expand('%:p:h')
+    let l:roots = systemlist('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel --git-dir 2>/dev/null')
+    " roots[] is either empty, or [ '/git/worktree/', '/git/git-dir/.git' ]
+    let l:toload = []
 
-    if ! exists(l:roots[0])
+    if ! exists('l:roots[0]')
         return
     endif
 
-    let l:root = l:roots[0]
+    " Start with git-dir
+    let l:root = l:roots[1]
 
-	let l:configFile = l:roots[1] . '/info/.vimrc'
-    if filereadable(l:configFile)
-        call add(l:toload, l:configFile)
+    if g:vim_independence_load_git_vimrc != 0
+        call add(l:toload, l:root.'/info/.vimrc')
+        call add(l:toload, l:root.'/info/vimrc')
     endif
 
-	" Find all of the .vimrc files from bottom-up
-	while l:maybe != l:root
-		let l:maybe = fnameescape(expand(l:query))
-		let l:query = l:query . ':h'
+    " Follow up with working tree
+    let l:root = l:roots[0]
+    if g:vim_independence_load_parent_vimrc != 0
+        " Find all of the .vimrc files from bottom-up
+        call add(l:toload, l:query . '/.vimrc')
+        while l:query != l:root
+            let l:query = fnamemodify(l:query,':h')
+            call add(l:toload, l:query . '/.vimrc')
+        endwhile
+    endif
 
-		let l:vimrc = l:maybe . '/.vimrc'
-		if filereadable(l:vimrc)
-			call add(l:toload, l:vimrc)
-		endif
-	endwhile
-
-	" Load all the .vimrc files from top-down
-	for l:vimrc in reverse(l:toload)
-		exec ":source " . l:vimrc
-	endfor
+    " Load all the .vimrc files from top-down
+    for l:vimrc in reverse(l:toload)
+        if filereadable(l:vimrc)
+            if !has_key(s:loaded_configs,l:vimrc)
+                s:loaded_configs[l:vimrc] = 1
+                exec ":source " . l:vimrc
+            endif
+        endif
+    endfor
 endfunction
+
+" Globals which can be customised
+if !exists( 'g:vim_independence_load_git_vimrc' )
+    let g:vim_independence_load_git_vimrc = 1
+endif
+if !exists( 'g:vim_independence_load_parent_vimrc' )
+    let g:vim_independence_load_parent_vimrc = 1
+endif
 
 " Section: Plugin completion
 let g:loaded_independence=2
