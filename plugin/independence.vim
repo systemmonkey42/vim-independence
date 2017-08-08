@@ -29,7 +29,8 @@ let g:loaded_independence=1
 
 " Section: Event group setup
 augroup Independence
-    autocmd VimEnter,BufNewFile,BufRead * call s:LoadConfig()
+    autocmd!
+    autocmd VimEnter,BufNewFile,BufRead * nested call s:LoadConfig()
 augroup END
 
 " Section: Script variables
