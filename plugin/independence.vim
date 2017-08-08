@@ -101,8 +101,11 @@ function s:LoadConfig()
 
     " Load all the .vimrc files from top-down
     for l:vimrc in reverse(l:toload)
+        if g:vim_independence_reload_if_changed && has_key(s:loaded_configs,l:vimrc) && getftime(l:vimrc) > s:loaded_configs[l:vimrc]
+            call remove(s:loaded_configs, l:vimrc)
+        endif
         if !has_key(s:loaded_configs,l:vimrc)
-            let s:loaded_configs[l:vimrc] = 1
+            let s:loaded_configs[l:vimrc] = getftime(l:vimrc)
             if filereadable(l:vimrc)
                 exec ':' . l:sandbox . 'source ' . l:vimrc
             endif
@@ -115,6 +118,11 @@ endfunction
 " Enable sandboxing by default
 if !exists( 'g:vim_independence_sandbox' )
     let g:vim_independence_sandbox = 1
+endif
+
+" Enable reloading changed vimrc files
+if !exists( 'g:vim_independence_reload_if_changed' )
+    let g:vim_independence_reload_if_changed = 0
 endif
 
 " Enable loading vimrc from git-dir/info
