@@ -44,53 +44,95 @@ let s:loaded_configs = {}
 
 " If the file .vimrc exists in the root of a git project - load it
 function s:LoadConfig()
-    if ! executable('git')
+    let l:query  = expand('%:p:h')
+
+    if &ft ==? 'help'
         return
     endif
 
-    let l:query  = expand('%:p:h')
-    let l:roots = systemlist('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel --git-dir 2>/dev/null')
+    if executable('git')
+        let l:roots = systemlist('git -C ' . shellescape(l:query) . ' rev-parse --show-toplevel --git-dir 2>/dev/null')
+    endif
+
     " roots[] is either empty, or [ '/git/worktree/', '/git/git-dir/.git' ]
     let l:toload = []
 
     if ! exists('l:roots[0]')
-        return
-    endif
-
-    " Start with git-dir
-    let l:root = l:roots[1]
-
-    if g:vim_independence_load_git_vimrc != 0
-        call add(l:toload, l:root.'/info/.vimrc')
-        call add(l:toload, l:root.'/info/vimrc')
-    endif
-
-    " Follow up with working tree
-    let l:root = l:roots[0]
-    if g:vim_independence_load_parent_vimrc != 0
-        " Find all of the .vimrc files from bottom-up
-        call add(l:toload, l:query . '/.vimrc')
-        while l:query != l:root
-            let l:query = fnamemodify(l:query,':h')
+        if g:vim_independence_load_vimrc != 0
             call add(l:toload, l:query . '/.vimrc')
-        endwhile
+        endif
+    else
+        " Start with working tree
+        let l:root = l:roots[0]
+
+        if g:vim_independence_load_parent_vimrc != 0
+            " Find all of the .vimrc files from bottom-up
+            call add(l:toload, l:query . '/.vimrc')
+            while l:query != l:root
+                let l:query = fnamemodify(l:query,':h')
+                call add(l:toload, l:query . '/.vimrc')
+            endwhile
+        else
+            " Load the vimrc local to the root of the repository
+            if g:vim_independence_load_root_vimrc != 0
+                call add(l:toload, l:root . '/.vimrc')
+            endif
+            " Load the vimrc local to the edited file.
+            if g:vim_independence_load_vimrc != 0
+                call add(l:toload, l:query . '/.vimrc')
+            endif
+        endif
+
+        " Follow up with git-dir/info/vimrc
+        let l:root = fnamemodify(l:roots[1],':p')
+
+        if g:vim_independence_load_git_vimrc != 0
+            call add(l:toload, l:root.'info/.vimrc')
+            call add(l:toload, l:root.'info/vimrc')
+        endif
+    endif
+
+    if g:vim_independence_sandbox == 0
+        let l:sandbox = ''
+    else
+        let l:sandbox = 'sandbox '
     endif
 
     " Load all the .vimrc files from top-down
     for l:vimrc in reverse(l:toload)
-        if filereadable(l:vimrc)
-            if !has_key(s:loaded_configs,l:vimrc)
-                s:loaded_configs[l:vimrc] = 1
-                exec ":source " . l:vimrc
+        if !has_key(s:loaded_configs,l:vimrc)
+            let s:loaded_configs[l:vimrc] = 1
+            if filereadable(l:vimrc)
+                exec ':' . l:sandbox . 'source ' . l:vimrc
             endif
         endif
     endfor
 endfunction
 
 " Globals which can be customised
+
+" Enable sandboxing by default
+if !exists( 'g:vim_independence_sandbox' )
+    let g:vim_independence_sandbox = 1
+endif
+
+" Enable loading vimrc from git-dir/info
 if !exists( 'g:vim_independence_load_git_vimrc' )
     let g:vim_independence_load_git_vimrc = 1
 endif
+
+" Enable loading vimrc from the root of the git working tree
+if !exists( 'g:vim_independence_load_root_vimrc' )
+    let g:vim_independence_load_vimrc = 1
+endif
+
+" Enable loading vimrc from the directory of the file being edited
+if !exists( 'g:vim_independence_load_vimrc' )
+    let g:vim_independence_load_vimrc = 1
+endif
+
+" Enable loading all intermediate vimrc files between the file path
+" and the root of the git repository working tree.
 if !exists( 'g:vim_independence_load_parent_vimrc' )
     let g:vim_independence_load_parent_vimrc = 1
 endif
