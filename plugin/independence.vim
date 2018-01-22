@@ -58,7 +58,7 @@ function s:LoadConfig()
     " roots[] is either empty, or [ '/git/worktree/', '/git/git-dir/.git' ]
     let l:toload = []
 
-    if ! exists('l:roots[0]')
+    if ! (exists('l:roots[0]') && exists('l:roots[1]'))
         if g:vim_independence_load_vimrc != 0
             call add(l:toload, l:query . '/.vimrc')
         endif
